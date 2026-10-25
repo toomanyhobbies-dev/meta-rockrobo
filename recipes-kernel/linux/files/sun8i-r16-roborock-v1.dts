@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/* Xiaomi Mi Robot Vacuum (Roborock V1). Board details and test-boot policy: sun8i-r16-roborock.dtsi */
+
+/dts-v1/;
+#include "sun8i-r16-roborock.dtsi"
+
+/ {
+	model = "Xiaomi Mi Robot Vacuum (Roborock V1)";
+	compatible = "roborock,v1", "allwinner,sun8i-r16", "allwinner,sun8i-a33";
+};

@@ -1,0 +1,45 @@
+mmc: sunxi: opt-in per-node zero clock phase for the Roborock eMMC
+
+The stock Allwinner 3.4 BSP runs the eMMC on the Roborock R16 boards (Toshiba 004G60, 8-bit DDR52 at 50 MHz) with
+output and sample clock delay 0, measured on both the Gen 1 and the S5 (stock kernel /proc/driver/sunxi-mmc.2
+hostinfo; U-Boot "sdly 25M 0" / "sdly 50M 0"). With the mainline sunxi_mmc_clk_delays values the 8-bit bus-width
+test fails and DDR multi-block reads wedge ("data error, sending stop command").
+
+The same boards' SDIO Wi-Fi runs at 4.8 / 6.8 ns (stock sunxi-mmc.1), which matches the table's 50 MHz row, so the
+table can't simply be zeroed: it is shared by every controller. Add a boolean DT property, rockrobo,zero-clk-phase,
+that makes a controller use phase 0/0 above the 400 kHz identification step; nodes without it are unchanged.
+
+Upstream-Status: Inappropriate [embedded specific]
+Signed-off-by: Tam Do <tam.do@manyhobbies.com>
+---
+diff --git a/drivers/mmc/host/sunxi-mmc.c b/drivers/mmc/host/sunxi-mmc.c
+index e0ab5fd63..c121ca3c0 100644
+--- a/drivers/mmc/host/sunxi-mmc.c
++++ b/drivers/mmc/host/sunxi-mmc.c
+@@ -27,6 +27,7 @@
+ #include <linux/mmc/slot-gpio.h>
+ #include <linux/module.h>
+ #include <linux/mod_devicetable.h>
++#include <linux/of.h>
+ #include <linux/of_address.h>
+ #include <linux/of_platform.h>
+ #include <linux/platform_device.h>
+@@ -751,6 +752,18 @@ static int sunxi_mmc_clk_set_phase(struct sunxi_mmc_host *host,
+ 		return -EINVAL;
+ 	}
+ 
++	/*
++	 * Board override, not upstream: the Roborock R16 boards' eMMC (Toshiba 004G60) needs output and sample
++	 * phase 0 at every operating speed (what the stock BSP programs), while their SDIO Wi-Fi wants this table's
++	 * values. The table is shared by all controllers, so opt in per node.
++	 */
++	if (index != SDXC_CLK_400K &&
++	    of_property_read_bool(host->dev->of_node, "rockrobo,zero-clk-phase")) {
++		clk_set_phase(host->clk_sample, 0);
++		clk_set_phase(host->clk_output, 0);
++		return 0;
++	}
++
+ 	clk_set_phase(host->clk_sample, host->cfg->clk_delays[index].sample);
+ 	clk_set_phase(host->clk_output, host->cfg->clk_delays[index].output);
+ 

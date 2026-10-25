@@ -1,0 +1,11 @@
+# systemd-networkd: DHCP on wlan0 once wpa_supplicant (rockrobo-wifi.service) associates. ClientIdentifier=mac so the
+# DHCP request identifies by MAC like the stock dhclient (networkd defaults to a machine-id DUID, which gets a
+# different lease) -- the robot then gets its usual address, matching stock behaviour.
+[Match]
+Name=wlan0
+
+[Network]
+DHCP=yes
+
+[DHCPv4]
+ClientIdentifier=mac

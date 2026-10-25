@@ -1,0 +1,14 @@
+[Unit]
+Description=App overlay on /opt (upper on the data partition; iterate apps without touching the ro system slot)
+After=mnt-data.mount rockrobo-overlay-setup.service
+Requires=mnt-data.mount rockrobo-overlay-setup.service
+
+[Mount]
+What=overlay
+Where=/opt
+Type=overlay
+# lowerdir is the image's ro /opt (a shipped app base); writable upper + work live on the data partition.
+Options=lowerdir=/opt,upperdir=/mnt/data/overlay/opt/upper,workdir=/mnt/data/overlay/opt/work
+
+[Install]
+WantedBy=multi-user.target

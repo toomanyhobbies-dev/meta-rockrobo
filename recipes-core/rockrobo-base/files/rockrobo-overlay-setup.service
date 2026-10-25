@@ -1,0 +1,14 @@
+[Unit]
+Description=Create the /opt app-overlay upper/work dirs on the data partition
+After=mnt-data.mount
+Requires=mnt-data.mount
+Before=opt.mount
+ConditionPathIsMountPoint=/mnt/data
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/mkdir -p /mnt/data/overlay/opt/upper /mnt/data/overlay/opt/work
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,132 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Roborock "Ruby-R16" main board, shared by the S5 (S502-00) and the Gen 1 (Xiaomi Mi Robot Vacuum = Roborock V1):
+ * Allwinner R16 (sun8i-a33 family), 512 MB DDR3, 8-bit eMMC, RTL8189ES SDIO Wi-Fi, AXP223 PMIC.
+ *
+ * Pin map from each robot's own compiled sys_config (decoded with tools/bin2fex.py). The two boards differ only in
+ * the DRAM clock (S5 552 MHz, Gen 1 600 MHz), the S5's two LDS mode pins (PL4/PL5) and one Wi-Fi supply entry.
+ *
+ *   sys_config                         -> here
+ *   [uart_para] debug port PF2/PF4      -> &uart0, console (stock: console=ttyS0,115200)
+ *   [uart1] PG6/PG7, [uart2] PB0/PB1    -> &uart1, &uart2: the MCU and LDS links (ttyS1/ttyS2 on the stock kernel)
+ *   [mmc2_para] 8-bit, emmc_rst PC16    -> &mmc2, eMMC
+ *   [mmc1_para] 4-bit SDIO + [wifi_para] RTL8189ES, shutdown PL6 -> &mmc1 + wifi_pwrseq
+ *
+ * Test-boot policy: change as little hardware state as possible.
+ *  - No PMIC node here. Linux never changes a voltage or switches a rail off; every rail stays where the stock
+ *    bootloader put it. The eMMC/Wi-Fi supply is described as a fixed 3.0 V rail for the MMC driver's benefit.
+ *    One board-specific exception: the S5's Wi-Fi also needs DLDO2, which nothing but the stock Wi-Fi driver ever
+ *    switches on, so sun8i-r16-roborock-s5.dts describes the AXP223 and constrains only its two Wi-Fi rails.
+ *  - No cpu-supply, and cpufreq is off in rockrobo.cfg: the CPU stays at the bootloader's clock and voltage.
+ *  - wdt0 (enabled in sun8i-a23-a33.dtsi) is the watchdog the stock bootloader arms for 16 s before starting Linux.
+ */
+
+#include "sun8i-a33.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	aliases {
+		/* the stock bootloader passes root=/dev/mmcblk0p8 (slot A) or p9 (slot B): the eMMC must be mmc0 */
+		mmc0 = &mmc2;
+		mmc1 = &mmc1;
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	/*
+	 * 512 MB DDR3 at the sun8i RAM base (0x40000000). This MUST be declared here: the stock bootloader boots the
+	 * mainline zImage with an appended DTB and does not fix up a /memory node, and the ATAG-compat mode we use
+	 * (ARM_ATAG_DTB_COMPAT_CMDLINE_FROM_BOOTLOADER) takes only the kernel cmdline from U-Boot's ATAGs, not the
+	 * memory ATAG. Without this node memblock starts empty and the very first early_alloc panics
+	 * ("early_alloc: Failed to allocate 4096 bytes") before any driver loads.
+	 */
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0x40000000 0x20000000>;
+	};
+
+	reg_vcc_io: regulator-vcc-io {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-io";	/* set up by the stock bootloader, never touched from Linux */
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
+		regulator-always-on;
+	};
+
+	wifi_pwrseq: pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&r_pio 0 6 GPIO_ACTIVE_LOW>;	/* PL6, [wifi_para] rtl8189es_shdn */
+	};
+};
+
+&pio {
+	uart2_pb_pins: uart2-pb-pins {
+		pins = "PB0", "PB1";
+		function = "uart2";
+	};
+
+	/*
+	 * Same pins as sun8i-a23-a33.dtsi's mmc2_8bit_pins, at the stock drive strength: the stock kernel's
+	 * /proc/driver/sunxi-mmc.2/io-drive reads 3 for clk/cmd/d0..d7 and PC_DRV0/1 hold level 3 on PC5..PC16
+	 * (sys_config: port:PCxx<3><1><3>), i.e. 40 mA with pull-up. The upstream group uses 30 mA.
+	 */
+	mmc2_8bit_40ma_pins: mmc2-8bit-40ma-pins {
+		pins = "PC5", "PC6", "PC8", "PC9", "PC10", "PC11", "PC12", "PC13", "PC14", "PC15", "PC16";
+		function = "mmc2";
+		drive-strength = <40>;
+		bias-pull-up;
+	};
+};
+
+&mmc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc1_pg_pins>;
+	vmmc-supply = <&reg_vcc_io>;
+	mmc-pwrseq = <&wifi_pwrseq>;
+	bus-width = <4>;
+	non-removable;
+	status = "okay";
+};
+
+/*
+ * eMMC (Toshiba 004G60) in the mode the stock kernel runs it: 8-bit DDR52 at 50 MHz. Read live from the stock 3.4
+ * kernel on slot A of both robots: /sys/kernel/debug/mmc0/ios "clock 50000000 Hz, bus width 3 (8 bits), timing 5
+ * (DDR50)"; /proc/driver/sunxi-mmc.2 hostinfo "Bus Width 8, DDR Mode 1, Oclk/Sclk Delay 0", SD_BWDR = 2. (The stock
+ * U-Boot uses 4-bit only for its own loads; the kernel switches to 8-bit.) The mainline deltas that broke 8-bit and
+ * DDR reads: clock phase (rockrobo,zero-clk-phase, from 0001-sunxi-mmc-zero-clk-phase-per-node.patch) and pad drive
+ * (40 mA group above). MMC_BLOCK_MINORS=32 in rockrobo.cfg is what lets p8..p11 (root = p9) exist at all.
+ */
+&mmc2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc2_8bit_40ma_pins>;
+	vmmc-supply = <&reg_vcc_io>;
+	rockrobo,zero-clk-phase;
+	bus-width = <8>;
+	non-removable;
+	cap-mmc-hw-reset;
+	status = "okay";
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pf_pins>;
+	status = "okay";
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pg_pins>;
+	status = "okay";
+};
+
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pb_pins>;
+	status = "okay";
+};
