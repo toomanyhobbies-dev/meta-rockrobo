@@ -36,5 +36,5 @@ do_configure:append:rockrobo() {
 
 # Kernel command line appended to the bootloader's (CONFIG_CMDLINE_EXTEND forced above). kernel.bbclass' do_configure
 # writes CONFIG_CMDLINE from this bitbake variable, so it must be set here, not as CONFIG_CMDLINE in the .cfg fragment.
-# rw mounts the slot read-write.
-CMDLINE:rockrobo = "rw"
+# ro: the system slot is never written.
+CMDLINE:rockrobo = "ro"
