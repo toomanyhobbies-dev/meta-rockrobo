@@ -7,8 +7,8 @@ SECTION = "base"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
-# Root's SSH authorized_keys, set by the build environment and never committed. Empty by default: no key is baked and
-# root SSH is unavailable until one is provided.
+# Root's SSH authorized_keys, set by the build environment and never committed; several keys are separated by "\n".
+# Empty by default: no key is baked and root SSH is unavailable until one is provided.
 ROCKROBO_AUTHORIZED_KEYS ??= ""
 
 SRC_URI = "file://journald-volatile.conf \
@@ -80,7 +80,7 @@ do_install() {
     # which is where dropbear looks. Empty -> no key baked.
     if [ -n "${ROCKROBO_AUTHORIZED_KEYS}" ]; then
         install -d -m 0700 ${D}/root/.ssh
-        printf '%s\n' "${ROCKROBO_AUTHORIZED_KEYS}" > ${D}/root/.ssh/authorized_keys
+        printf '%b\n' "${ROCKROBO_AUTHORIZED_KEYS}" > ${D}/root/.ssh/authorized_keys
         chmod 0600 ${D}/root/.ssh/authorized_keys
     fi
 
