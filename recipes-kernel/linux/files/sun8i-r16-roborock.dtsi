@@ -8,7 +8,11 @@
  *
  *   sys_config                         -> here
  *   [uart_para] debug port PF2/PF4      -> &uart0, console (stock: console=ttyS0,115200)
- *   [uart1] PG6/PG7, [uart2] PB0/PB1    -> &uart1, &uart2: the MCU and LDS links (ttyS1/ttyS2 on the stock kernel)
+ *   [uart1] PG6/PG7                     -> &uart1, ttyS1: the LDS lidar link (stock userspace uses /dev/ttyS1)
+ *   [uart2] PB0/PB1                     -> &uart2, ttyS2: the chassis-MCU link (stock userspace: /dev/ttyS2, 1152000 8N1)
+ *   [recovery] confirm_id PB2, detect_id PB3, plus PG13 -> not described: the stock kernel drives PB2 high and PG13
+ *                                          low, but holding PB2 low on a running stock S5 does not make the MCU cut
+ *                                          power, and gpio-hogs on &pio broke mainline boot (no rootfs).
  *   [mmc2_para] 8-bit, emmc_rst PC16    -> &mmc2, eMMC
  *   [mmc1_para] 4-bit SDIO + [wifi_para] RTL8189ES, shutdown PL6 -> &mmc1 + wifi_pwrseq
  *
@@ -111,6 +115,18 @@
 	non-removable;
 	cap-mmc-hw-reset;
 	status = "okay";
+};
+
+/*
+ * Clock APB2 (all UARTs) from pll-periph / 16 = 37.5 MHz, as the stock kernel does (read from its clk debugfs:
+ * pll_periph 600 MHz -> apb2 37.5 MHz -> uart1/uart2 37.5 MHz). The MCU link runs at 1152000 baud: from 37.5 MHz the
+ * 8250 divides by 2 to 1171875 (+1.7%), the same rate stock produces. Left on osc24M the nearest is 1500000 (+30%).
+ * CLK_APB2 (22) and CLK_PLL_PERIPH (10) are internal sunxi-ng ids, not in dt-bindings.
+ */
+&ccu {
+	assigned-clocks = <&ccu 22>;
+	assigned-clock-parents = <&ccu 10>;
+	assigned-clock-rates = <37500000>;
 };
 
 &uart0 {
