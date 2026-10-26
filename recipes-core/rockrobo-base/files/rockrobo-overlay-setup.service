@@ -1,8 +1,11 @@
 [Unit]
 Description=Create the /opt app-overlay upper/work dirs on the data partition
+# Ordered before local-fs.target through opt.mount
+DefaultDependencies=no
+Conflicts=shutdown.target
 After=mnt-data.mount
 Requires=mnt-data.mount
-Before=opt.mount
+Before=opt.mount shutdown.target
 ConditionPathIsMountPoint=/mnt/data
 
 [Service]
