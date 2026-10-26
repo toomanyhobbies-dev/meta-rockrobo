@@ -27,6 +27,7 @@
 
 #include "sun8i-a33.dtsi"
 
+#include <dt-bindings/clock/sun6i-rtc.h>
 #include <dt-bindings/gpio/gpio.h>
 
 / {
@@ -63,9 +64,16 @@
 		regulator-always-on;
 	};
 
+	/*
+	 * The RTL8189ES runs from the RTC's 32 kHz fan-out (stock: LOSC_OUT_GATING 0x01f00060 = 1). Claim it here, as
+	 * sun8i-r16-bananapi-m2m.dts does: unclaimed, "clk: Disabling unused clocks" gates it off, and any SDIO probe that
+	 * lands after that step fails ("fatal err update clk timeout", no mmc1 card).
+	 */
 	wifi_pwrseq: pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		reset-gpios = <&r_pio 0 6 GPIO_ACTIVE_LOW>;	/* PL6, [wifi_para] rtl8189es_shdn */
+		clocks = <&rtc CLK_OSC32K_FANOUT>;
+		clock-names = "ext_clock";
 	};
 };
 

@@ -15,9 +15,16 @@
  * both at 3.3 V). The Gen 1 only uses DLDO1, which the bootloader leaves on; on the S5 nothing switches DLDO2 on
  * unless Linux knows about the PMIC. Without it: "sunxi-mmc 1c10000.mmc: fatal err update clk timeout", no card.
  *
- * Keep the dtsi's rule (Linux leaves rails where the bootloader put them) for everything else: only the two Wi-Fi
- * rails get constraints. The regulator core cannot change or switch off a regulator without constraints, so every
- * other AXP223 output stays untouched. Do NOT pin the others to the stock kernel's runtime values: those include
+ * Keep the dtsi's rule (Linux leaves rails where the bootloader put them) for everything else. A rail with a DT node
+ * is NOT left alone just because it has no constraints: of_regulator grants REGULATOR_CHANGE_STATUS to every node not
+ * marked regulator-always-on, and the regulator core's late cleanup switches off each enabled-but-unclaimed one 30 s
+ * after boot. With axp22x.dtsi's full rail list that cut the S5's CPU/DRAM/IO rails and powered the board off ~30 s
+ * into every mainline boot. So below, every rail the stock kernel runs enabled (its /sys/class/regulator, read on a
+ * running stock S5) is regulator-always-on with no voltage constraints, so it is never switched off and its voltage is
+ * never changed. Every rail stock leaves disabled has its node deleted, so it registers without constraints and the
+ * core never touches it. Deleting the enabled rails' nodes as well kept the board up but broke SDIO Wi-Fi
+ * ("fatal err update clk timeout" on mmc1).
+ * Do NOT give the always-on rails voltage constraints from the stock kernel's runtime values: those include
  * cpufreq-scaled ones (DCDC3 reads 1.14 V under stock, the bootloader sets 1.24 V), and mainline doesn't scale
  * the CPU clock. Bus/address as on the other R16 boards (sun8i-r16-bananapi-m2m.dts): AXP223 is the RSB variant.
  */
@@ -41,11 +48,29 @@
 
 #include "axp22x.dtsi"
 
+/* Enabled under stock (see above): keep them on, never change their voltage. */
+&reg_dcdc1 { regulator-always-on; };
+&reg_dcdc2 { regulator-always-on; };
+&reg_dcdc3 { regulator-always-on; };
+&reg_dcdc4 { regulator-always-on; };
+&reg_dcdc5 { regulator-always-on; };
+&reg_dc5ldo { regulator-always-on; };
+&reg_aldo1 { regulator-always-on; };
+&reg_aldo2 { regulator-always-on; };
+&reg_aldo3 { regulator-always-on; };
+
+/* Disabled under stock: no node, no constraints, never touched. */
+/delete-node/ &reg_dc1sw;
+/delete-node/ &reg_dldo3;
+/delete-node/ &reg_dldo4;
+/delete-node/ &reg_eldo1;
+/delete-node/ &reg_eldo2;
+/delete-node/ &reg_eldo3;
+
 /*
  * Both Wi-Fi rails are OFF at 0.7 V out of the bootloader on the S5 (diagnostic boot read PWR_OUT_CTRL2 reg 0x12 = 0,
  * DLDO1/DLDO2 voltage regs 0x15/0x16 = 0; unlike the Gen 1, where DLDO1 is already on). The stock kernel's Wi-Fi
- * driver brings both up at 3.3 V. Constrain only these two; every other AXP223 rail has no constraints, so the
- * regulator core cannot change or disable it, and it stays exactly where the bootloader put it.
+ * driver brings both up at 3.3 V. These are the only two rails Linux sets a voltage on.
  */
 &reg_dldo1 {
 	regulator-always-on;
