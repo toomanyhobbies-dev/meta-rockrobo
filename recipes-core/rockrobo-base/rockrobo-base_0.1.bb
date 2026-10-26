@@ -1,7 +1,7 @@
 SUMMARY = "Runtime configuration for rockrobo-image"
 DESCRIPTION = "systemd configuration for the rockrobo image: volatile journald, the data-partition mount, Wi-Fi \
-(wpa_supplicant + networkd DHCP), watchdog management, the /opt app overlay, and a lean service set. Root's \
-authorized_keys is injected at build time (ROCKROBO_AUTHORIZED_KEYS)."
+(wpa_supplicant + networkd DHCP), watchdog management, power-key handling, the /opt app overlay, and a lean service \
+set. Root's authorized_keys is injected at build time (ROCKROBO_AUTHORIZED_KEYS)."
 HOMEPAGE = "https://github.com/toomanyhobbies-dev/meta-rockrobo"
 SECTION = "base"
 LICENSE = "MIT"
@@ -20,13 +20,15 @@ SRC_URI = "file://journald-volatile.conf \
            file://opt.mount \
            file://mnt-data.mount \
            file://rockrobo-wifi.service \
-           file://25-wlan0.network"
+           file://25-wlan0.network \
+           file://logind-powerkey.conf"
 
 # Masked (symlinked to /dev/null): busybox syslog/klogd duplicate journald; getty@tty1 has no VT on this headless
 # board (console is serial).
 MASKED_UNITS = "busybox-syslog.service busybox-klogd.service getty@tty1.service"
 
 FILES:${PN} += "${sysconfdir}/systemd/journald.conf.d/volatile.conf \
+                ${sysconfdir}/systemd/logind.conf.d/powerkey.conf \
                 ${sysconfdir}/systemd/system.conf.d/10-watchdog.conf \
                 ${sysconfdir}/tmpfiles.d/dropbear-rundir.conf \
                 ${sysconfdir}/systemd/system/dropbearkey.service.d/ed25519.conf \
@@ -47,6 +49,10 @@ RDEPENDS:${PN} = "systemd wpa-supplicant"
 do_install() {
     install -d ${D}${sysconfdir}/systemd/journald.conf.d
     install -m 0644 ${WORKDIR}/journald-volatile.conf ${D}${sysconfdir}/systemd/journald.conf.d/volatile.conf
+
+    # Power key: ignored by logind.
+    install -d ${D}${sysconfdir}/systemd/logind.conf.d
+    install -m 0644 ${WORKDIR}/logind-powerkey.conf ${D}${sysconfdir}/systemd/logind.conf.d/powerkey.conf
 
     # systemd watchdog management (opens and pings /dev/watchdog).
     install -d ${D}${sysconfdir}/systemd/system.conf.d
