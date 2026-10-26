@@ -1,15 +1,16 @@
 SUMMARY = "Realtek RTL8189ES SDIO 802.11n Wi-Fi driver"
 DESCRIPTION = "Out-of-tree driver for the Realtek RTL8189ES SDIO Wi-Fi on the Roborock R16 (sun8i-a33), which has no \
 mainline driver. Builds 8189es.ko and binds the SDIO function as wlan0."
-HOMEPAGE = "https://github.com/EvilOlaf/rtl8189ES_linux"
+HOMEPAGE = "https://github.com/jwrdegoede/rtl8189ES_linux"
 SECTION = "kernel/modules"
 LICENSE = "GPL-2.0-only"
 # No standalone license file in the tree; the module declares MODULE_LICENSE("GPL").
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/GPL-2.0-only;md5=801f80980d171dd6425610833a22dbe6"
 
-# Fork carrying the kernel 6.x API-compatibility patches.
-SRC_URI = "git://github.com/EvilOlaf/rtl8189ES_linux;protocol=https;branch=master"
-SRCREV = "2fef6c6736ade86a6d2f3d43e487ecad9c2b0e5b"
+# Community-vetted fork (used by Arch AUR, Armbian, ophub HAOS 6.6) carrying the kernel 6.x API-compatibility
+# patches. Same vendor tree as the previous EvilOlaf fork: identical Makefile, still builds 8189es.ko.
+SRC_URI = "git://github.com/jwrdegoede/rtl8189ES_linux;protocol=https;branch=master"
+SRCREV = "f4712611578312fcd67795a0d43d78eb70378238"
 S = "${WORKDIR}/git"
 
 inherit module
