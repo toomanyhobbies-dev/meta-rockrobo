@@ -1,0 +1,33 @@
+From: Tam Do <tam.do@manyhobbies.com>
+Subject: [PATCH] mmc: sunxi-mmc: reset the controller after an update-clock timeout
+
+When the clock-update command (UPCLK_ONLY | WAIT_PRE_OVER) times out,
+it is left pending in the controller. Every later clock update by the
+core's retries then times out too, so the card is never initialised for
+the rest of the boot, even once the condition that blocked the first
+command is gone.
+
+On a board whose SDIO Wi-Fi rails come up just after the controller
+starts probing, the card holds DAT0 busy for a moment and the first
+update times out on about half of all boots. Re-initialising the
+controller at the timeout (reset plus the init_host register setup)
+lets the next retry succeed.
+
+Upstream-Status: Pending
+Signed-off-by: Tam Do <tam.do@manyhobbies.com>
+---
+--- a/drivers/mmc/host/sunxi-mmc.c
++++ b/drivers/mmc/host/sunxi-mmc.c
+@@ -689,6 +689,12 @@
+ 
+ 	if (rval & SDXC_START) {
+ 		dev_err(mmc_dev(host->mmc), "fatal err update clk timeout\n");
++		/*
++		 * The command stays pending (e.g. on a card holding DAT0 busy
++		 * while it powers up) and would time out every retry: reset the
++		 * controller so the core's next attempt starts clean.
++		 */
++		sunxi_mmc_init_host(host);
+ 		return -EIO;
+ 	}
+ 
