@@ -1,33 +1,38 @@
+From d8a1551cb5045b81c7d85c2cbd468a581d432e64 Mon Sep 17 00:00:00 2001
 From: Tam Do <tam.do@manyhobbies.com>
-Subject: [PATCH] mmc: sunxi-mmc: reset the controller after an update-clock timeout
+Date: Tue, 27 Oct 2026 03:08:04 +0000
+Subject: [PATCH] mmc: sunxi: reset the controller after an update-clock
+ timeout
 
-When the clock-update command (UPCLK_ONLY | WAIT_PRE_OVER) times out,
-it is left pending in the controller. Every later clock update by the
-core's retries then times out too, so the card is never initialised for
-the rest of the boot, even once the condition that blocked the first
-command is gone.
+If the clock-update command times out it stays pending in the
+controller, and every later clock update times out as well, so the
+card cannot be initialised until the next probe.
 
-On a board whose SDIO Wi-Fi rails come up just after the controller
-starts probing, the card holds DAT0 busy for a moment and the first
-update times out on about half of all boots. Re-initialising the
-controller at the timeout (reset plus the init_host register setup)
-lets the next retry succeed.
+This happens on an R16 board whose SDIO Wi-Fi holds DAT0 busy while
+its supply comes up during the first clock update.
 
-Upstream-Status: Pending
+Reset the controller on timeout so the next attempt can succeed.
+
+Fixes: 3cbcb16095f9 ("mmc: sunxi: Add driver for SD/MMC hosts found on Allwinner sunxi SoCs")
+Cc: stable@vger.kernel.org
+Upstream-Status: Submitted [https://lore.kernel.org/all/179307312104.39863.12372814163472848752@manyhobbies.com/]
 Signed-off-by: Tam Do <tam.do@manyhobbies.com>
 ---
+ drivers/mmc/host/sunxi-mmc.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/mmc/host/sunxi-mmc.c b/drivers/mmc/host/sunxi-mmc.c
+index fe4c0f6..439cfa4 100644
 --- a/drivers/mmc/host/sunxi-mmc.c
 +++ b/drivers/mmc/host/sunxi-mmc.c
-@@ -689,6 +689,12 @@
+@@ -688,6 +688,7 @@ static int sunxi_mmc_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en)
  
  	if (rval & SDXC_START) {
  		dev_err(mmc_dev(host->mmc), "fatal err update clk timeout\n");
-+		/*
-+		 * The command stays pending (e.g. on a card holding DAT0 busy
-+		 * while it powers up) and would time out every retry: reset the
-+		 * controller so the core's next attempt starts clean.
-+		 */
 +		sunxi_mmc_init_host(host);
  		return -EIO;
  	}
  
+-- 
+2.39.5
+
