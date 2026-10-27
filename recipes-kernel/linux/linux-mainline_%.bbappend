@@ -16,7 +16,8 @@ ROCKROBO_DTS = "sun8i-r16-roborock.dtsi sun8i-r16-roborock-s5.dts sun8i-r16-robo
 # 8-bit bus-width test fails and DDR reads wedge. The SDIO Wi-Fi runs at the table's 50 MHz values (stock 4.8 / 6.8 ns),
 # so the override must be per node, not a table edit. Set on &mmc2 in sun8i-r16-roborock.dtsi.
 # 0002: reset the mmc controller after an update-clock timeout, so the S5's SDIO Wi-Fi recovers.
-SRC_URI:append:rockrobo = " ${@' '.join('file://' + f for f in d.getVar('ROCKROBO_DTS').split())} file://rockrobo.cfg file://0001-sunxi-mmc-zero-clk-phase-per-node.patch \
+# rockrobo-trim.cfg: switch off the defconfig's subsystems these boards don't have or use (most of its ~617 modules).
+SRC_URI:append:rockrobo = " ${@' '.join('file://' + f for f in d.getVar('ROCKROBO_DTS').split())} file://rockrobo.cfg file://rockrobo-trim.cfg file://0001-sunxi-mmc-zero-clk-phase-per-node.patch \
                                   file://0002-sunxi-mmc-reset-the-controller-after-an-update-clock-timeout.patch"
 
 do_configure:append:rockrobo() {

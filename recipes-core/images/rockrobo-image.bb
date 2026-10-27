@@ -13,6 +13,9 @@ IMAGE_INSTALL = "packagegroup-core-boot rockrobo-bootfiles rockrobo-base dropbea
 # a dependency; wireless-regdb supplies the regulatory database.
 IMAGE_INSTALL += "kernel-module-8189es iw wireless-regdb wpa-supplicant"
 
+# Chassis-MCU heartbeat
+IMAGE_INSTALL += "rockrobo-mcu-heartbeat"
+
 # Full GNU userland alongside busybox (update-alternatives gives it precedence), matching the stock userland.
 IMAGE_INSTALL += "coreutils util-linux iproute2 procps bash"
 
