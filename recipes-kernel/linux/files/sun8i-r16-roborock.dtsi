@@ -54,6 +54,14 @@
 	};
 };
 
+/* SID efuses: read directly, as on the A10 */
+&{/soc} {
+	sid: eeprom@1c23800 {
+		compatible = "allwinner,sun4i-a10-sid";
+		reg = <0x01c23800 0x10>;
+	};
+};
+
 &pio {
 	uart2_pb_pins: uart2-pb-pins {
 		pins = "PB0", "PB1";
