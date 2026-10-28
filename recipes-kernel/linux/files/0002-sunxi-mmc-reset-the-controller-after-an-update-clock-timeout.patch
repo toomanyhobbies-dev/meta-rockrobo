@@ -1,7 +1,7 @@
-From 77279208652524b9249dd1b41f3d52ae61c12dbc Mon Sep 17 00:00:00 2001
+From e1406c3cf17336489bce92cd5f1c1b66c4d17bd2 Mon Sep 17 00:00:00 2001
 From: Tam Do <tam.do@manyhobbies.com>
-Date: Wed, 28 Oct 2026 04:49:21 +0000
-Subject: [PATCH v2] mmc: sunxi: reset the controller after an update-clock
+Date: Wed, 28 Oct 2026 05:26:32 +0000
+Subject: [PATCH v3] mmc: sunxi: reset the controller after an update-clock
  timeout
 
 If the clock-update command times out it stays pending in the
@@ -11,43 +11,54 @@ card cannot be initialised until the next probe.
 This happens on an R16 board whose SDIO Wi-Fi holds DAT0 busy while
 its supply comes up during the first clock update.
 
-Reset the controller on timeout so the next attempt can succeed. Hold
-host->lock across the reset: it rewrites REG_IMASK from sdio_imask,
-which sunxi_mmc_enable_sdio_irq() and the interrupt handler update
-under that lock.
+Reset the controller on timeout so the next attempt can succeed. This
+runs sunxi_mmc_init_host() with the interrupt enabled for the first
+time, so write REG_IMASK from sdio_imask under host->lock, as
+sunxi_mmc_enable_sdio_irq() updates both under that lock.
 
 Fixes: 3cbcb16095f9 ("mmc: sunxi: Add driver for SD/MMC hosts found on Allwinner sunxi SoCs")
 Cc: stable@vger.kernel.org
 Upstream-Status: Pending
 Signed-off-by: Tam Do <tam.do@manyhobbies.com>
 ---
-v2: hold host->lock across the reset, so it cannot race
-    sunxi_mmc_enable_sdio_irq() or sunxi_mmc_irq() on REG_IMASK and
-    sdio_imask (Sashiko review).
+v3: take host->lock only around the REG_IMASK write in
+    sunxi_mmc_init_host(), not across the reset; v2 polled the reset on
+    jiffies with interrupts off. The return value stays unchecked, as in
+    sunxi_mmc_runtime_resume(): if the reset itself times out the
+    controller is wedged either way.
+v2: held host->lock across the reset (not posted)
 v1: https://lore.kernel.org/all/179307312104.39863.12372814163472848752@manyhobbies.com/
 
  drivers/mmc/host/sunxi-mmc.c | 4 ++++
  1 file changed, 4 insertions(+)
 
 diff --git a/drivers/mmc/host/sunxi-mmc.c b/drivers/mmc/host/sunxi-mmc.c
-index fe4c0f6..a083e5a 100644
+index fe4c0f6d73f3..55313780d06d 100644
 --- a/drivers/mmc/host/sunxi-mmc.c
 +++ b/drivers/mmc/host/sunxi-mmc.c
-@@ -660,6 +660,7 @@ static irqreturn_t sunxi_mmc_handle_manual_stop(int irq, void *dev_id)
- static int sunxi_mmc_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en)
+@@ -322,6 +322,7 @@ static int sunxi_mmc_reset_host(struct sunxi_mmc_host *host)
+ 
+ static int sunxi_mmc_init_host(struct sunxi_mmc_host *host)
  {
- 	unsigned long expire = jiffies + msecs_to_jiffies(750);
 +	unsigned long flags;
  	u32 rval;
  
- 	dev_dbg(mmc_dev(host->mmc), "%sabling the clock\n",
-@@ -688,6 +689,9 @@ static int sunxi_mmc_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en)
+ 	if (sunxi_mmc_reset_host(host))
+@@ -336,7 +337,9 @@ static int sunxi_mmc_init_host(struct sunxi_mmc_host *host)
+ 	/* Maximum timeout value */
+ 	mmc_writel(host, REG_TMOUT, 0xffffffff);
+ 	/* Unmask SDIO interrupt if needed */
++	spin_lock_irqsave(&host->lock, flags);
+ 	mmc_writel(host, REG_IMASK, host->sdio_imask);
++	spin_unlock_irqrestore(&host->lock, flags);
+ 	/* Clear all pending interrupts */
+ 	mmc_writel(host, REG_RINTR, 0xffffffff);
+ 	/* Debug register? undocumented */
+@@ -688,6 +691,7 @@ static int sunxi_mmc_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en)
  
  	if (rval & SDXC_START) {
  		dev_err(mmc_dev(host->mmc), "fatal err update clk timeout\n");
-+		spin_lock_irqsave(&host->lock, flags);
 +		sunxi_mmc_init_host(host);
-+		spin_unlock_irqrestore(&host->lock, flags);
  		return -EIO;
  	}
  
