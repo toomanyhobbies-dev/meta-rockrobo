@@ -4,9 +4,26 @@
 /dts-v1/;
 #include "sun8i-r16-roborock.dtsi"
 
+#include <dt-bindings/pwm/pwm.h>
+
 / {
 	model = "Roborock S5 (S502-00)";
 	compatible = "roborock,s5", "allwinner,sun8i-r16", "allwinner,sun8i-a33";
+
+	/* lidar motor, [lds_para] and [pwm0_para] in the stock FEX */
+	lds-motor {
+		compatible = "roborock,lds-motor";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm0_pin>;
+		pwms = <&pwm 0 50000 PWM_POLARITY_INVERTED>;
+		mode-gpios = <&r_pio 0 5 GPIO_ACTIVE_HIGH>,	/* PL5 */
+			     <&r_pio 0 4 GPIO_ACTIVE_HIGH>;	/* PL4 */
+		interrupts-extended = <&r_pio 0 9 IRQ_TYPE_EDGE_FALLING>;	/* PL9, lds_int */
+	};
+};
+
+&pwm {
+	status = "okay";
 };
 
 /*
