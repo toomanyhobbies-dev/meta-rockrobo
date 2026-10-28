@@ -18,7 +18,7 @@ sunxi_mmc_enable_sdio_irq() updates both under that lock.
 
 Fixes: 3cbcb16095f9 ("mmc: sunxi: Add driver for SD/MMC hosts found on Allwinner sunxi SoCs")
 Cc: stable@vger.kernel.org
-Upstream-Status: Pending
+Upstream-Status: Submitted [https://lore.kernel.org/all/179318778660.81375.11263258280496155344@manyhobbies.com/]
 Signed-off-by: Tam Do <tam.do@manyhobbies.com>
 ---
 v3: take host->lock only around the REG_IMASK write in
