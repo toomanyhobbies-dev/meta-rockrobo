@@ -1,0 +1,43 @@
+state.sun8ia33audio {
+	control.2 {
+		iface MIXER
+		name 'AIF1 DA0 Playback Volume'
+		value.0 0
+		value.1 160
+	}
+	control.6 {
+		iface MIXER
+		name 'DAC Playback Volume'
+		value.0 160
+		value.1 160
+	}
+	control.7 {
+		iface MIXER
+		name 'Headphone Playback Volume'
+		value 59
+	}
+	control.8 {
+		iface MIXER
+		name 'Headphone Playback Switch'
+		value.0 true
+		value.1 true
+	}
+	control.26 {
+		iface MIXER
+		name 'AIF1 DA0 Stereo Playback Route'
+		value.0 'Mix Mono'
+		value.1 'Mix Mono'
+	}
+	control.28 {
+		iface MIXER
+		name 'AIF1 Slot 0 Digital DAC Playback Switch'
+		value.0 true
+		value.1 true
+	}
+	control.41 {
+		iface MIXER
+		name 'Headphone Source Playback Route'
+		value.0 DAC
+		value.1 DAC
+	}
+}

@@ -8,6 +8,7 @@
  * uart2 PB0/PB1  chassis MCU, 1152000 8N1
  * mmc1  PG0-PG5  RTL8189ES SDIO, shutdown PL6
  * mmc2  PC5-PC16 eMMC, 8-bit
+ * PH9   speaker amplifier enable, fed from the codec's headphone output
  *
  * The PMIC is left to the bootloader here; see sun8i-r16-roborock-s5.dts for the S5's Wi-Fi rails.
  */
@@ -45,6 +46,13 @@
 		regulator-always-on;
 	};
 
+	/* [audio0] audio_pa_ctrl */
+	speaker_amp: audio-amplifier {
+		compatible = "simple-audio-amplifier";
+		enable-gpios = <&pio 7 9 GPIO_ACTIVE_HIGH>;	/* PH9 */
+		sound-name-prefix = "Speaker Amp";
+	};
+
 	/* RTL8189ES 32 kHz clock: claimed so it is not gated off as unused */
 	wifi_pwrseq: pwrseq {
 		compatible = "mmc-pwrseq-simple";
@@ -77,6 +85,14 @@
 	};
 };
 
+&codec {
+	status = "okay";
+};
+
+&dai {
+	status = "okay";
+};
+
 &mmc1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc1_pg_pins>;
@@ -104,6 +120,21 @@
 	assigned-clocks = <&ccu 22>;
 	assigned-clock-parents = <&ccu 10>;
 	assigned-clock-rates = <37500000>;
+};
+
+/* speaker amplifier on the headphone output, HPCOM as its reference ([audio0] headphone_direct_used) */
+&sound {
+	simple-audio-card,aux-devs = <&codec_analog>, <&speaker_amp>;
+	simple-audio-card,widgets = "Speaker", "Speaker";
+	simple-audio-card,routing =
+		"Left DAC", "DACL",
+		"Right DAC", "DACR",
+		"HP", "HPCOM",
+		"Speaker Amp INL", "HP",
+		"Speaker Amp INR", "HP",
+		"Speaker", "Speaker Amp OUTL",
+		"Speaker", "Speaker Amp OUTR";
+	status = "okay";
 };
 
 &uart0 {
