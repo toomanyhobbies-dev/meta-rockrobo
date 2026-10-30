@@ -37,3 +37,9 @@ do_install() {
 
 RPROVIDES:${PN} += "kernel-module-8189es"
 KERNEL_MODULE_AUTOLOAD += "8189es"
+
+# Power save off, as the stock firmware runs it
+KERNEL_MODULE_PROBECONF += "8189es"
+# Read by kernel-module-split as module_conf_<module>
+# nooelint: oelint.vars.mispell.unknown
+module_conf_8189es = "options 8189es rtw_power_mgnt=0 rtw_ips_mode=0 rtw_lps_level=0"
