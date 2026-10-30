@@ -8,3 +8,8 @@
 	model = "Xiaomi Mi Robot Vacuum (Roborock V1)";
 	compatible = "roborock,v1", "allwinner,sun8i-r16", "allwinner,sun8i-a33";
 };
+
+/* no PMIC described yet, so no cpu-supply: keep the bootloader's CPU clock */
+&cpu0 {
+	/delete-property/ operating-points-v2;
+};

@@ -22,6 +22,41 @@
 	};
 };
 
+&cpu0 {
+	cpu-supply = <&reg_dcdc3>;
+};
+
+/* stock [dvfs_table]: 648 MHz to 1.2 GHz at its voltages */
+&cpu0_opp_table {
+	/delete-node/ opp-120000000;
+	/delete-node/ opp-240000000;
+	/delete-node/ opp-312000000;
+	/delete-node/ opp-408000000;
+	/delete-node/ opp-480000000;
+	/delete-node/ opp-504000000;
+	/delete-node/ opp-600000000;
+	/delete-node/ opp-720000000;
+	/delete-node/ opp-912000000;
+
+	opp-648000000 {
+		opp-microvolt = <1140000>;
+	};
+
+	opp-816000000 {
+		opp-microvolt = <1140000>;
+	};
+
+	opp-1008000000 {
+		opp-microvolt = <1240000>;
+	};
+
+	opp-1200000000 {
+		opp-hz = /bits/ 64 <1200000000>;
+		opp-microvolt = <1360000>;
+		clock-latency-ns = <244144>; /* 8 32k periods */
+	};
+};
+
 &pwm {
 	status = "okay";
 };
@@ -49,7 +84,12 @@
 /* enabled under stock */
 &reg_dcdc1 { regulator-always-on; };
 &reg_dcdc2 { regulator-always-on; };
-&reg_dcdc3 { regulator-always-on; };
+&reg_dcdc3 {
+	regulator-always-on;
+	regulator-min-microvolt = <1140000>;
+	regulator-max-microvolt = <1360000>;
+	regulator-name = "vdd-cpu";
+};
 &reg_dcdc4 { regulator-always-on; };
 &reg_dcdc5 { regulator-always-on; };
 &reg_dc5ldo { regulator-always-on; };
