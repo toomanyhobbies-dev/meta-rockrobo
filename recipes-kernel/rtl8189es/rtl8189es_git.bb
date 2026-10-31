@@ -7,6 +7,8 @@ LICENSE = "GPL-2.0-only"
 # No standalone license file in the tree; the module declares MODULE_LICENSE("GPL").
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/GPL-2.0-only;md5=801f80980d171dd6425610833a22dbe6"
 
+PV = "5.8.9+git"
+
 # Community-vetted fork (used by Arch AUR, Armbian, ophub HAOS 6.6) carrying the kernel 6.x API-compatibility
 # patches. Same vendor tree as the previous EvilOlaf fork: identical Makefile, still builds 8189es.ko.
 SRC_URI = "git://github.com/jwrdegoede/rtl8189ES_linux;protocol=https;branch=master"

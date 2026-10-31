@@ -105,8 +105,6 @@
 		reg = <0x3a3>;
 		interrupt-parent = <&r_intc>;
 		interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_LOW>;
-		/* written at probe; keep the bootloader value */
-		x-powers,dcdc-freq = <3000>;
 	};
 };
 

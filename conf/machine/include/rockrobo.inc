@@ -23,5 +23,5 @@ IMAGE_ROOTFS_EXTRA_SPACE = "0"
 # The stock U-Boot loads only a zImage (no separate initrd). The poky probe bundles its initramfs into the zImage;
 # the rockrobo distro boots its own rootfs from a plain zImage. Gate on DISTRO (set after local.conf parsing, so not
 # overridable from a kas file).
-INITRAMFS_IMAGE = "rockrobo-probe-initramfs"
+INITRAMFS_IMAGE = "${@'rockrobo-probe-initramfs' if d.getVar('DISTRO') == 'poky' else ''}"
 INITRAMFS_IMAGE_BUNDLE = "${@'1' if d.getVar('DISTRO') == 'poky' else '0'}"
