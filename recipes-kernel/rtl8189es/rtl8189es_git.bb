@@ -13,7 +13,6 @@ PV = "5.8.9+git"
 # patches. Same vendor tree as the previous EvilOlaf fork: identical Makefile, still builds 8189es.ko.
 SRC_URI = "git://github.com/jwrdegoede/rtl8189ES_linux;protocol=https;branch=master"
 SRCREV = "f4712611578312fcd67795a0d43d78eb70378238"
-S = "${WORKDIR}/git"
 
 inherit module
 

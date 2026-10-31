@@ -1,0 +1,2 @@
+# No VT on this headless board; the console is serial
+disable getty@.service

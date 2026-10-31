@@ -1,0 +1,34 @@
+From 339ba3f1520502eb7dce6205752301b94270a7fa Mon Sep 17 00:00:00 2001
+From: Tam Do <tam.do@manyhobbies.com>
+Date: Sat, 31 Oct 2026 21:37:45 +0000
+Subject: [PATCH] ARM: gen-mach-types: don't embed the input's path
+
+mach-types.h records the file it was generated from, which for an
+out-of-tree build is the absolute path of the source tree. That puts the
+build directory into a generated header that is packaged with the
+kernel source (Yocto's buildpaths QA check rejects it) and makes the
+output depend on where the tree lives. Print only the file name.
+
+Upstream-Status: Pending
+Signed-off-by: Tam Do <tam.do@manyhobbies.com>
+---
+ arch/arm/tools/gen-mach-types | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/tools/gen-mach-types b/arch/arm/tools/gen-mach-types
+index cbe1c33..e17a011 100644
+--- a/arch/arm/tools/gen-mach-types
++++ b/arch/arm/tools/gen-mach-types
+@@ -24,7 +24,8 @@ NF == 3 {
+ 
+ END	{
+ 	  printf("/*\n");
+-	  printf(" * This was automagically generated from %s!\n", FILENAME);
++	  n = split(FILENAME, parts, "/")
++	  printf(" * This was automagically generated from %s!\n", parts[n]);
+ 	  printf(" * Do NOT edit\n");
+ 	  printf(" */\n\n");
+ 	  printf("#ifndef __ASM_ARM_MACH_TYPE_H\n");
+-- 
+2.39.5
+
