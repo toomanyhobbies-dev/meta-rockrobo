@@ -146,7 +146,7 @@
 	cpu-supply = <&reg_dcdc3>;
 };
 
-/* stock [dvfs_table]: 648 MHz to 1.2 GHz at its voltages */
+/* stock [dvfs_table] voltages, up to 1008 MHz */
 &cpu0_opp_table {
 	/delete-node/ opp-120000000;
 	/delete-node/ opp-240000000;
@@ -168,12 +168,6 @@
 
 	opp-1008000000 {
 		opp-microvolt = <1240000>;
-	};
-
-	opp-1200000000 {
-		opp-hz = /bits/ 64 <1200000000>;
-		opp-microvolt = <1360000>;
-		clock-latency-ns = <244144>; /* 8 32k periods */
 	};
 };
 

@@ -21,8 +21,7 @@ SRC_URI = "file://journald-volatile.conf \
            file://mnt-data.mount \
            file://rockrobo-wifi.service \
            file://25-wlan0.network \
-           file://logind-powerkey.conf \
-           file://cpufreq-schedutil.conf"
+           file://logind-powerkey.conf"
 
 # Masked (symlinked to /dev/null): busybox syslog/klogd duplicate journald; getty@tty1 has no VT on this headless
 # board (console is serial).
@@ -32,7 +31,6 @@ FILES:${PN} += "${sysconfdir}/systemd/journald.conf.d/volatile.conf \
                 ${sysconfdir}/systemd/logind.conf.d/powerkey.conf \
                 ${sysconfdir}/systemd/system.conf.d/10-watchdog.conf \
                 ${sysconfdir}/tmpfiles.d/dropbear-rundir.conf \
-                ${sysconfdir}/tmpfiles.d/cpufreq-schedutil.conf \
                 ${sysconfdir}/systemd/system/dropbearkey.service.d/ed25519.conf \
                 ${sysconfdir}/systemd/system/dropbear@.service.d/ed25519.conf \
                 ${sysconfdir}/systemd/network/25-wlan0.network \
@@ -63,9 +61,6 @@ do_install() {
     # /run/dropbear for the host key (read-only rootfs keeps the key on tmpfs).
     install -d ${D}${sysconfdir}/tmpfiles.d
     install -m 0644 ${WORKDIR}/dropbear-rundir.conf ${D}${sysconfdir}/tmpfiles.d/dropbear-rundir.conf
-
-    # schedutil rate limit (no-op where cpufreq isn't enabled)
-    install -m 0644 ${WORKDIR}/cpufreq-schedutil.conf ${D}${sysconfdir}/tmpfiles.d/cpufreq-schedutil.conf
 
     # ed25519 host key (faster keygen than RSA); drop-ins override both dropbear units' ExecStart.
     install -d ${D}${sysconfdir}/systemd/system/dropbearkey.service.d ${D}${sysconfdir}/systemd/system/dropbear@.service.d
