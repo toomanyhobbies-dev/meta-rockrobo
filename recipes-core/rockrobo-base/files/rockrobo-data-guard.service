@@ -1,0 +1,12 @@
+[Unit]
+Description=Fall back to the other slot if the data partition is not mounted in time
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/rockrobo-data-guard 90
+
+[Install]
+WantedBy=sysinit.target

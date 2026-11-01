@@ -1,0 +1,10 @@
+#!/bin/sh
+# Wait up to $1 seconds for /mnt/data, then fall back to the other slot
+limit=${1:-90}
+i=0
+while [ "$i" -lt "$limit" ]; do
+    grep -q " /mnt/data " /proc/mounts && exit 0
+    sleep 1
+    i=$((i + 1))
+done
+exec /usr/sbin/rockrobo-data-fail "not mounted after ${limit} s"

@@ -20,6 +20,10 @@ SRC_URI = "file://journald-volatile.conf \
            file://opt.mount \
            file://mnt-data.mount \
            file://rockrobo-wifi.service \
+           file://rockrobo-data-guard.service \
+           file://rockrobo-data-fail.service \
+           file://rockrobo-data-guard \
+           file://rockrobo-data-fail \
            file://25-wlan0.network \
            file://logind-powerkey.conf \
            file://80-rockrobo.preset"
@@ -34,12 +38,14 @@ FILES:${PN} += "${sysconfdir}/systemd/journald.conf.d/volatile.conf \
                 ${sysconfdir}/systemd/system/dropbear@.service.d/ed25519.conf \
                 ${sysconfdir}/systemd/network/25-wlan0.network \
                 ${systemd_unitdir}/system-preset/80-rockrobo.preset \
+                ${systemd_system_unitdir}/rockrobo-data-fail.service \
                 /root/.ssh/authorized_keys \
                 /mnt/data \
                 /opt"
 
 inherit systemd
-SYSTEMD_SERVICE:${PN} = "mnt-data.mount rockrobo-overlay-setup.service opt.mount rockrobo-wifi.service"
+SYSTEMD_SERVICE:${PN} = "mnt-data.mount rockrobo-overlay-setup.service opt.mount rockrobo-wifi.service \
+                         rockrobo-data-guard.service"
 
 RDEPENDS:${PN} = "systemd wpa-supplicant"
 
@@ -73,6 +79,13 @@ do_install() {
     install -m 0644 ${UNPACKDIR}/rockrobo-overlay-setup.service ${D}${systemd_system_unitdir}/rockrobo-overlay-setup.service
     install -m 0644 ${UNPACKDIR}/opt.mount ${D}${systemd_system_unitdir}/opt.mount
     install -m 0644 ${UNPACKDIR}/rockrobo-wifi.service ${D}${systemd_system_unitdir}/rockrobo-wifi.service
+
+    # No data partition: save the boot log and fall back to the other slot.
+    install -m 0644 ${UNPACKDIR}/rockrobo-data-guard.service ${D}${systemd_system_unitdir}/rockrobo-data-guard.service
+    install -m 0644 ${UNPACKDIR}/rockrobo-data-fail.service ${D}${systemd_system_unitdir}/rockrobo-data-fail.service
+    install -d ${D}${sbindir}
+    install -m 0755 ${UNPACKDIR}/rockrobo-data-guard ${D}${sbindir}/rockrobo-data-guard
+    install -m 0755 ${UNPACKDIR}/rockrobo-data-fail ${D}${sbindir}/rockrobo-data-fail
 
     # networkd DHCP on wlan0.
     install -d ${D}${sysconfdir}/systemd/network

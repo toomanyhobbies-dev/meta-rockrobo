@@ -1,0 +1,18 @@
+#!/bin/sh
+# Save why /mnt/data is missing to the rootfs, then reboot; the bootloader falls back to the other slot
+dir=/root/data-fail
+if mount -o remount,rw /; then
+    mkdir -p "$dir"
+    {
+        echo "data partition unavailable: $*"
+        cat /proc/uptime /proc/cmdline /proc/mounts
+        ls -l /dev/mmcblk0*
+        systemctl status mnt-data.mount --no-pager
+        dmesg
+        journalctl -b -o short-monotonic --no-pager
+    } > "$dir/$(date +%Y%m%dT%H%M%S).log" 2>&1
+    sync
+    mount -o remount,ro /
+fi
+sync
+systemctl reboot -ff

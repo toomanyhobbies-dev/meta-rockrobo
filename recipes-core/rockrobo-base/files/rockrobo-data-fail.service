@@ -1,0 +1,7 @@
+[Unit]
+Description=Data partition unavailable: save the boot log and fall back to the other slot
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/rockrobo-data-fail mnt-data.mount failed
