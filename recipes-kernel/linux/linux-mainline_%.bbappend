@@ -17,12 +17,14 @@ ROCKROBO_DTS = "sun8i-r16-roborock.dtsi sun8i-r16-roborock-s5.dts sun8i-r16-robo
 # so the override must be per node, not a table edit. Set on &mmc2 in sun8i-r16-roborock.dtsi.
 # 0002: reset the mmc controller after an update-clock timeout, so the S5's SDIO Wi-Fi recovers.
 # 0003: no build path in the generated mach-types.h (buildpaths QA).
+# 0005: reset the mmc controller after a failed stop or a request that never completes.
 # rockrobo-trim.cfg: switch off the defconfig's subsystems these boards don't have or use (most of its ~617 modules).
 # rockrobo-update.cfg: what RAUC needs to install a bundle.
 SRC_URI:append:rockrobo = " ${@' '.join('file://' + f for f in d.getVar('ROCKROBO_DTS').split())} file://rockrobo.cfg file://rockrobo-trim.cfg file://rockrobo-update.cfg file://0001-sunxi-mmc-zero-clk-phase-per-node.patch \
                                   file://0002-sunxi-mmc-reset-the-controller-after-an-update-clock-timeout.patch \
                                   file://0003-ARM-gen-mach-types-don-t-embed-the-input-s-path.patch \
-                                  file://0004-sunxi-mmc-opt-out-of-DDR-per-node.patch"
+                                  file://0004-sunxi-mmc-opt-out-of-DDR-per-node.patch \
+                                  file://0005-sunxi-mmc-recover-from-a-failed-stop-and-a-lost-request.patch"
 
 do_configure:append:rockrobo() {
     for f in ${ROCKROBO_DTS}; do

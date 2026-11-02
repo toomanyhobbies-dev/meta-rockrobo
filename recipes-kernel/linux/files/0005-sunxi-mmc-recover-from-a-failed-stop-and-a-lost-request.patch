@@ -1,0 +1,220 @@
+From b5bc617aff6ced59611b5bbd6375593e9c173a62 Mon Sep 17 00:00:00 2001
+From: Tam Do <tam.do@manyhobbies.com>
+Date: Mon, 2 Nov 2026 12:14:34 +0000
+Subject: [PATCH] mmc: sunxi: recover from a failed stop and from a lost
+ request
+
+After a data error the driver sends CMD12 by hand. If that stop fails,
+the controller is left mid-transfer: only its DMA and FIFO were reset,
+and the next command never raises an interrupt. The driver arms no
+timer, and the MMC core waits for completion indefinitely, so every
+later I/O to the card hangs in D state.
+
+Seen on an R16 board's eMMC after half an hour of load at 4-bit SDR
+50 MHz:
+
+  sunxi-mmc 1c11000.mmc: data error, sending stop command
+  sunxi-mmc 1c11000.mmc: send stop command failed
+
+after which ext4 writers block in do_get_write_access and direct reads
+never return. The same sequence was reported on H5 in 2019.
+
+Reset and reinitialise the controller, as runtime resume does, when the
+manual stop fails. Also give each request a deadline: if it is still
+pending after 10 s (or the command's busy timeout plus a second), reset
+the controller and complete it with -ETIMEDOUT, so the core's own
+recovery (CMD13, CMD12, card reset) can run.
+
+Link: https://lkml.iu.edu/hypermail/linux/kernel/1902.0/03566.html
+Upstream-Status: Pending
+Signed-off-by: Tam Do <tam.do@manyhobbies.com>
+---
+ drivers/mmc/host/sunxi-mmc.c | 92 +++++++++++++++++++++++++++++++++++-
+ 1 file changed, 90 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/host/sunxi-mmc.c b/drivers/mmc/host/sunxi-mmc.c
+index e91a84e..5999e5b 100644
+--- a/drivers/mmc/host/sunxi-mmc.c
++++ b/drivers/mmc/host/sunxi-mmc.c
+@@ -37,6 +37,7 @@
+ #include <linux/scatterlist.h>
+ #include <linux/slab.h>
+ #include <linux/spinlock.h>
++#include <linux/workqueue.h>
+ 
+ /* register offset definitions */
+ #define SDXC_REG_GCTRL	(0x00) /* SMC Global Control Register */
+@@ -297,6 +298,10 @@ struct sunxi_mmc_host {
+ 	struct mmc_request *manual_stop_mrq;
+ 	int		ferror;
+ 
++	/* request timeout */
++	struct delayed_work timeout_work;
++	unsigned long	mrq_deadline;
++
+ 	/* vqmmc */
+ 	bool		vqmmc_enabled;
+ 
+@@ -446,11 +451,12 @@ static void sunxi_mmc_start_dma(struct sunxi_mmc_host *host,
+ 		   SDXC_IDMAC_FIX_BURST | SDXC_IDMAC_IDMA_ON);
+ }
+ 
+-static void sunxi_mmc_send_manual_stop(struct sunxi_mmc_host *host,
++static bool sunxi_mmc_send_manual_stop(struct sunxi_mmc_host *host,
+ 				       struct mmc_request *req)
+ {
+ 	u32 arg, cmd_val, ri;
+ 	unsigned long expire = jiffies + msecs_to_jiffies(1000);
++	bool ok = true;
+ 
+ 	cmd_val = SDXC_START | SDXC_RESP_EXPIRE |
+ 		  SDXC_STOP_ABORT_CMD | SDXC_CHECK_RESPONSE_CRC;
+@@ -476,12 +482,32 @@ static void sunxi_mmc_send_manual_stop(struct sunxi_mmc_host *host,
+ 		dev_err(mmc_dev(host->mmc), "send stop command failed\n");
+ 		if (req->stop)
+ 			req->stop->resp[0] = -ETIMEDOUT;
++		ok = false;
+ 	} else {
+ 		if (req->stop)
+ 			req->stop->resp[0] = mmc_readl(host, REG_RESP0);
+ 	}
+ 
+ 	mmc_writel(host, REG_RINTR, 0xffff);
++
++	return ok;
++}
++
++static void sunxi_mmc_set_bus_width(struct sunxi_mmc_host *host,
++				   unsigned char width);
++static void sunxi_mmc_set_clk(struct sunxi_mmc_host *host, struct mmc_ios *ios);
++
++/*
++ * Bring the controller back to a known state, as runtime resume does.
++ * Called with no request in flight and without host->lock held; sleeps.
++ */
++static void sunxi_mmc_recover(struct sunxi_mmc_host *host)
++{
++	struct mmc_host *mmc = host->mmc;
++
++	sunxi_mmc_init_host(host);
++	sunxi_mmc_set_bus_width(host, mmc->ios.bus_width);
++	sunxi_mmc_set_clk(host, &mmc->ios);
+ }
+ 
+ static void sunxi_mmc_dump_errinfo(struct sunxi_mmc_host *host)
+@@ -651,7 +677,10 @@ static irqreturn_t sunxi_mmc_handle_manual_stop(int irq, void *dev_id)
+ 	 * Additionally we have wait states within this function
+ 	 * so having it in a lock is a very bad idea.
+ 	 */
+-	sunxi_mmc_send_manual_stop(host, mrq);
++	if (!sunxi_mmc_send_manual_stop(host, mrq)) {
++		dev_err(mmc_dev(host->mmc), "resetting the controller\n");
++		sunxi_mmc_recover(host);
++	}
+ 
+ 	spin_lock_irqsave(&host->lock, iflags);
+ 	host->manual_stop_mrq = NULL;
+@@ -1023,6 +1052,56 @@ static void sunxi_mmc_hw_reset(struct mmc_host *mmc)
+ 	udelay(300);
+ }
+ 
++/* Longest a request may stay with the controller before it is reset */
++#define SUNXI_MMC_REQUEST_TIMEOUT_MS	10000
++
++static void sunxi_mmc_timeout_work(struct work_struct *work)
++{
++	struct sunxi_mmc_host *host = container_of(to_delayed_work(work),
++						   struct sunxi_mmc_host,
++						   timeout_work);
++	struct mmc_request *mrq;
++	unsigned long iflags;
++
++	spin_lock_irqsave(&host->lock, iflags);
++	mrq = host->mrq;
++	if (!mrq) {
++		spin_unlock_irqrestore(&host->lock, iflags);
++		return;
++	}
++	/* A later request than the one this work was queued for */
++	if (time_before(jiffies, host->mrq_deadline)) {
++		mod_delayed_work(system_wq, &host->timeout_work,
++				 host->mrq_deadline - jiffies);
++		spin_unlock_irqrestore(&host->lock, iflags);
++		return;
++	}
++	host->mrq = NULL;
++	host->int_sum = 0;
++	host->wait_dma = false;
++	mmc_writel(host, REG_IMASK, host->sdio_imask);
++	mmc_writel(host, REG_IDIE, 0);
++	spin_unlock_irqrestore(&host->lock, iflags);
++
++	dev_err(mmc_dev(host->mmc),
++		"request timed out (cmd %d), resetting the controller\n",
++		mrq->cmd->opcode);
++
++	mmc_writel(host, REG_DMAC, 0);
++	sunxi_mmc_recover(host);
++
++	mrq->cmd->error = -ETIMEDOUT;
++	if (mrq->data) {
++		mrq->data->error = -ETIMEDOUT;
++		dma_unmap_sg(mmc_dev(host->mmc), mrq->data->sg,
++			     mrq->data->sg_len, mmc_get_dma_dir(mrq->data));
++	}
++	if (mrq->stop)
++		mrq->stop->error = -ETIMEDOUT;
++
++	mmc_request_done(host->mmc, mrq);
++}
++
+ static void sunxi_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+ {
+ 	struct sunxi_mmc_host *host = mmc_priv(mmc);
+@@ -1032,8 +1111,12 @@ static void sunxi_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+ 	u32 imask = SDXC_INTERRUPT_ERROR_BIT;
+ 	u32 cmd_val = SDXC_START | (cmd->opcode & 0x3f);
+ 	bool wait_dma = host->wait_dma;
++	unsigned long timeout = msecs_to_jiffies(SUNXI_MMC_REQUEST_TIMEOUT_MS);
+ 	int ret;
+ 
++	if (cmd->busy_timeout > SUNXI_MMC_REQUEST_TIMEOUT_MS)
++		timeout = msecs_to_jiffies(cmd->busy_timeout + 1000);
++
+ 	/* Check for set_ios errors (should never happen) */
+ 	if (host->ferror) {
+ 		mrq->cmd->error = host->ferror;
+@@ -1112,11 +1195,14 @@ static void sunxi_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+ 
+ 	host->mrq = mrq;
+ 	host->wait_dma = wait_dma;
++	host->mrq_deadline = jiffies + timeout;
+ 	mmc_writel(host, REG_IMASK, host->sdio_imask | imask);
+ 	mmc_writel(host, REG_CARG, cmd->arg);
+ 	mmc_writel(host, REG_CMDR, cmd_val);
+ 
+ 	spin_unlock_irqrestore(&host->lock, iflags);
++
++	mod_delayed_work(system_wq, &host->timeout_work, timeout);
+ }
+ 
+ static int sunxi_mmc_card_busy(struct mmc_host *mmc)
+@@ -1396,6 +1482,7 @@ static int sunxi_mmc_probe(struct platform_device *pdev)
+ 	host->dev = &pdev->dev;
+ 	host->mmc = mmc;
+ 	spin_lock_init(&host->lock);
++	INIT_DELAYED_WORK(&host->timeout_work, sunxi_mmc_timeout_work);
+ 
+ 	ret = sunxi_mmc_resource_request(host, pdev);
+ 	if (ret)
+@@ -1511,6 +1598,7 @@ static void sunxi_mmc_remove(struct platform_device *pdev)
+ 	struct sunxi_mmc_host *host = mmc_priv(mmc);
+ 
+ 	mmc_remove_host(mmc);
++	cancel_delayed_work_sync(&host->timeout_work);
+ 	pm_runtime_disable(&pdev->dev);
+ 	if (!pm_runtime_status_suspended(&pdev->dev)) {
+ 		disable_irq(host->irq);
+-- 
+2.39.5
+
