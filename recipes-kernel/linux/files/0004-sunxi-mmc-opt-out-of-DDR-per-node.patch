@@ -1,0 +1,27 @@
+From: Tam Do <tam.do@manyhobbies.com>
+Subject: [PATCH] mmc: sunxi: opt-in per-node DDR opt-out for the Roborock Gen 1 eMMC
+
+On the Gen 1 (Toshiba 004G60) the 8-bit bus-width test can fail ("data error, sending stop command", "switch to bus
+width 8 failed"); the core then runs the card in 4-bit DDR52, and every read in that mode returns each 16-bit word
+byte-swapped (the partition table's 0x55aa reads as 0xaa55), so no partitions are found and the slot doesn't boot.
+4-bit SDR at 50 MHz reads correctly. Add a boolean DT property, rockrobo,no-ddr, that clears the DDR caps for a node.
+
+Upstream-Status: Inappropriate [embedded specific]
+Signed-off-by: Tam Do <tam.do@manyhobbies.com>
+---
+--- a/drivers/mmc/host/sunxi-mmc.c
++++ b/drivers/mmc/host/sunxi-mmc.c
+@@ -1457,6 +1457,13 @@
+ 	/* TODO: This driver doesn't support HS400 mode yet */
+ 	mmc->caps2 &= ~MMC_CAP2_HS400;
+ 
++	/*
++	 * Board override, not upstream: the Roborock Gen 1's eMMC can fall back to 4-bit DDR52 when its 8-bit bus
++	 * test fails, and reads in that mode come back with every 16-bit word byte-swapped. Let a node opt out of DDR.
++	 */
++	if (of_property_read_bool(pdev->dev.of_node, "rockrobo,no-ddr"))
++		mmc->caps &= ~(MMC_CAP_3_3V_DDR | MMC_CAP_1_8V_DDR | MMC_CAP_1_2V_DDR);
++
+ 	ret = sunxi_mmc_init_host(host);
+ 	if (ret)
+ 		goto error_free_dma;

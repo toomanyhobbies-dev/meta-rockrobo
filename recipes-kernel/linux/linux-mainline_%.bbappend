@@ -21,7 +21,8 @@ ROCKROBO_DTS = "sun8i-r16-roborock.dtsi sun8i-r16-roborock-s5.dts sun8i-r16-robo
 # rockrobo-update.cfg: what RAUC needs to install a bundle.
 SRC_URI:append:rockrobo = " ${@' '.join('file://' + f for f in d.getVar('ROCKROBO_DTS').split())} file://rockrobo.cfg file://rockrobo-trim.cfg file://rockrobo-update.cfg file://0001-sunxi-mmc-zero-clk-phase-per-node.patch \
                                   file://0002-sunxi-mmc-reset-the-controller-after-an-update-clock-timeout.patch \
-                                  file://0003-ARM-gen-mach-types-don-t-embed-the-input-s-path.patch"
+                                  file://0003-ARM-gen-mach-types-don-t-embed-the-input-s-path.patch \
+                                  file://0004-sunxi-mmc-opt-out-of-DDR-per-node.patch"
 
 do_configure:append:rockrobo() {
     for f in ${ROCKROBO_DTS}; do

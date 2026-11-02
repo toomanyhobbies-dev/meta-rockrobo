@@ -26,3 +26,9 @@
 
 /* disabled under stock */
 /delete-node/ &reg_dldo2;
+
+/* eMMC: 4-bit SDR at 50 MHz; this board fails the 8-bit bus test, and 4-bit DDR52 reads byte-swapped */
+&mmc2 {
+	bus-width = <4>;
+	rockrobo,no-ddr;
+};
