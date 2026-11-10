@@ -1,7 +1,7 @@
 [Unit]
 Description=App overlay on /opt (upper on the data partition; iterate apps without touching the ro system slot)
-After=mnt-data.mount rockrobo-overlay-setup.service
-Requires=mnt-data.mount rockrobo-overlay-setup.service
+After=mnt-data.mount dustcrawler-overlay-setup.service
+Requires=mnt-data.mount dustcrawler-overlay-setup.service
 
 [Mount]
 What=overlay

@@ -62,15 +62,15 @@ int main(int argc, char **argv)
 
 	fd = open_link(dev);
 	if (fd < 0) {
-		fprintf(stderr, "rockrobo-mcu-heartbeat: %s: %s\n", dev, strerror(errno));
+		fprintf(stderr, "dustcrawler-mcu-heartbeat: %s: %s\n", dev, strerror(errno));
 		return 1;
 	}
-	fprintf(stderr, "rockrobo-mcu-heartbeat: heartbeat on %s every 1 s\n", dev);
+	fprintf(stderr, "dustcrawler-mcu-heartbeat: heartbeat on %s every 1 s\n", dev);
 
 	clock_gettime(CLOCK_MONOTONIC, &next);
 	while (!stop) {
 		if (send_frame(fd, heartbeat, sizeof(heartbeat)) < 0) {
-			fprintf(stderr, "rockrobo-mcu-heartbeat: write: %s\n", strerror(errno));
+			fprintf(stderr, "dustcrawler-mcu-heartbeat: write: %s\n", strerror(errno));
 			return 1;
 		}
 		/* drop whatever the MCU streams at us; nobody else reads this link */
@@ -81,10 +81,10 @@ int main(int argc, char **argv)
 	}
 
 	if (send_frame(fd, grace, sizeof(grace)) < 0) {
-		fprintf(stderr, "rockrobo-mcu-heartbeat: grace frame: %s\n", strerror(errno));
+		fprintf(stderr, "dustcrawler-mcu-heartbeat: grace frame: %s\n", strerror(errno));
 		return 1;
 	}
 	tcdrain(fd);
-	fprintf(stderr, "rockrobo-mcu-heartbeat: sent the 120 s grace interval\n");
+	fprintf(stderr, "dustcrawler-mcu-heartbeat: sent the 120 s grace interval\n");
 	return 0;
 }

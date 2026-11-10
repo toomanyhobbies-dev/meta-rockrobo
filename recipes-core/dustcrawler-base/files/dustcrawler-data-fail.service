@@ -4,4 +4,4 @@ DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/rockrobo-data-fail mnt-data.mount failed
+ExecStart=/usr/sbin/dustcrawler-data-fail mnt-data.mount failed

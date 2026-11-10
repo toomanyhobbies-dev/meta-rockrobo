@@ -1,32 +1,32 @@
-SUMMARY = "Runtime configuration for rockrobo-image"
-DESCRIPTION = "systemd configuration for the rockrobo image: volatile journald, the data-partition mount, Wi-Fi \
+SUMMARY = "Runtime configuration for dustcrawler-image"
+DESCRIPTION = "systemd configuration for the dustcrawler image: volatile journald, the data-partition mount, Wi-Fi \
 (wpa_supplicant + networkd DHCP), watchdog management, power-key handling, the /opt app overlay, and a lean service \
-set. Root's authorized_keys is injected at build time (ROCKROBO_AUTHORIZED_KEYS)."
-HOMEPAGE = "https://github.com/toomanyhobbies-dev/meta-rockrobo"
+set. Root's authorized_keys is injected at build time (DUSTCRAWLER_AUTHORIZED_KEYS)."
+HOMEPAGE = "https://github.com/toomanyhobbies-dev/dustcrawler-nav"
 SECTION = "base"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
 # Root's SSH authorized_keys, set by the build environment and never committed; several keys are separated by "\n".
 # Empty by default: no key is baked and root SSH is unavailable until one is provided.
-ROCKROBO_AUTHORIZED_KEYS ??= ""
+DUSTCRAWLER_AUTHORIZED_KEYS ??= ""
 
 SRC_URI = "file://journald-volatile.conf \
            file://10-watchdog.conf \
            file://dropbear-rundir.conf \
            file://dropbearkey-ed25519.conf \
            file://dropbear-ed25519.conf \
-           file://rockrobo-overlay-setup.service \
+           file://dustcrawler-overlay-setup.service \
            file://opt.mount \
            file://mnt-data.mount \
-           file://rockrobo-wifi.service \
-           file://rockrobo-data-guard.service \
-           file://rockrobo-data-fail.service \
-           file://rockrobo-data-guard \
-           file://rockrobo-data-fail \
+           file://dustcrawler-wifi.service \
+           file://dustcrawler-data-guard.service \
+           file://dustcrawler-data-fail.service \
+           file://dustcrawler-data-guard \
+           file://dustcrawler-data-fail \
            file://25-wlan0.network \
            file://logind-powerkey.conf \
-           file://80-rockrobo.preset"
+           file://80-dustcrawler.preset"
 
 S = "${UNPACKDIR}"
 
@@ -37,15 +37,15 @@ FILES:${PN} += "${sysconfdir}/systemd/journald.conf.d/volatile.conf \
                 ${sysconfdir}/systemd/system/dropbearkey.service.d/ed25519.conf \
                 ${sysconfdir}/systemd/system/dropbear@.service.d/ed25519.conf \
                 ${sysconfdir}/systemd/network/25-wlan0.network \
-                ${systemd_unitdir}/system-preset/80-rockrobo.preset \
-                ${systemd_system_unitdir}/rockrobo-data-fail.service \
+                ${systemd_unitdir}/system-preset/80-dustcrawler.preset \
+                ${systemd_system_unitdir}/dustcrawler-data-fail.service \
                 /root/.ssh/authorized_keys \
                 /mnt/data \
                 /opt"
 
 inherit systemd
-SYSTEMD_SERVICE:${PN} = "mnt-data.mount rockrobo-overlay-setup.service opt.mount rockrobo-wifi.service \
-                         rockrobo-data-guard.service"
+SYSTEMD_SERVICE:${PN} = "mnt-data.mount dustcrawler-overlay-setup.service opt.mount dustcrawler-wifi.service \
+                         dustcrawler-data-guard.service"
 
 RDEPENDS:${PN} = "systemd wpa-supplicant"
 
@@ -72,30 +72,30 @@ do_install() {
 
     # Presets: getty@tty1 off
     install -d ${D}${systemd_unitdir}/system-preset
-    install -m 0644 ${UNPACKDIR}/80-rockrobo.preset ${D}${systemd_unitdir}/system-preset/80-rockrobo.preset
+    install -m 0644 ${UNPACKDIR}/80-dustcrawler.preset ${D}${systemd_unitdir}/system-preset/80-dustcrawler.preset
 
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${UNPACKDIR}/mnt-data.mount ${D}${systemd_system_unitdir}/mnt-data.mount
-    install -m 0644 ${UNPACKDIR}/rockrobo-overlay-setup.service ${D}${systemd_system_unitdir}/rockrobo-overlay-setup.service
+    install -m 0644 ${UNPACKDIR}/dustcrawler-overlay-setup.service ${D}${systemd_system_unitdir}/dustcrawler-overlay-setup.service
     install -m 0644 ${UNPACKDIR}/opt.mount ${D}${systemd_system_unitdir}/opt.mount
-    install -m 0644 ${UNPACKDIR}/rockrobo-wifi.service ${D}${systemd_system_unitdir}/rockrobo-wifi.service
+    install -m 0644 ${UNPACKDIR}/dustcrawler-wifi.service ${D}${systemd_system_unitdir}/dustcrawler-wifi.service
 
     # No data partition: save the boot log and fall back to the other slot.
-    install -m 0644 ${UNPACKDIR}/rockrobo-data-guard.service ${D}${systemd_system_unitdir}/rockrobo-data-guard.service
-    install -m 0644 ${UNPACKDIR}/rockrobo-data-fail.service ${D}${systemd_system_unitdir}/rockrobo-data-fail.service
+    install -m 0644 ${UNPACKDIR}/dustcrawler-data-guard.service ${D}${systemd_system_unitdir}/dustcrawler-data-guard.service
+    install -m 0644 ${UNPACKDIR}/dustcrawler-data-fail.service ${D}${systemd_system_unitdir}/dustcrawler-data-fail.service
     install -d ${D}${sbindir}
-    install -m 0755 ${UNPACKDIR}/rockrobo-data-guard ${D}${sbindir}/rockrobo-data-guard
-    install -m 0755 ${UNPACKDIR}/rockrobo-data-fail ${D}${sbindir}/rockrobo-data-fail
+    install -m 0755 ${UNPACKDIR}/dustcrawler-data-guard ${D}${sbindir}/dustcrawler-data-guard
+    install -m 0755 ${UNPACKDIR}/dustcrawler-data-fail ${D}${sbindir}/dustcrawler-data-fail
 
     # networkd DHCP on wlan0.
     install -d ${D}${sysconfdir}/systemd/network
     install -m 0644 ${UNPACKDIR}/25-wlan0.network ${D}${sysconfdir}/systemd/network/25-wlan0.network
 
-    # Root's authorized_keys from ROCKROBO_AUTHORIZED_KEYS. Root's home is /root in this image (not OE's ROOT_HOME),
+    # Root's authorized_keys from DUSTCRAWLER_AUTHORIZED_KEYS. Root's home is /root in this image (not OE's ROOT_HOME),
     # which is where dropbear looks. Empty -> no key baked.
-    if [ -n "${ROCKROBO_AUTHORIZED_KEYS}" ]; then
+    if [ -n "${DUSTCRAWLER_AUTHORIZED_KEYS}" ]; then
         install -d -m 0700 ${D}/root/.ssh
-        printf '%b\n' "${ROCKROBO_AUTHORIZED_KEYS}" > ${D}/root/.ssh/authorized_keys
+        printf '%b\n' "${DUSTCRAWLER_AUTHORIZED_KEYS}" > ${D}/root/.ssh/authorized_keys
         chmod 0600 ${D}/root/.ssh/authorized_keys
     fi
 

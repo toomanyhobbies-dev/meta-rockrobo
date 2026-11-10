@@ -1,14 +1,14 @@
 # Roborock R16 robots: shared board dtsi + per-robot device trees (Kbuild builds any allwinner/*.dtb whose .dts exists,
-# so copying them into the tree is enough), and the kernel config the stock bootloader needs (rockrobo.cfg).
+# so copying them into the tree is enough), and the kernel config the stock bootloader needs (dustcrawler.cfg).
 #
-# oelint note: `rockrobo` is a MACHINEOVERRIDE we define in conf/machine/include/rockrobo.inc. oelint-adv parses each
+# oelint note: `dustcrawler` is a MACHINEOVERRIDE we define in conf/machine/include/dustcrawler.inc. oelint-adv parses each
 # file on its own and cannot see that, so it misreads the override-scoped lines below as global/unknown-override. The
-# two `# nooelint:` lines suppress exactly those false positives (the override-scoped FILESEXTRAPATHS and ROCKROBO_DTS) and nothing else.
+# two `# nooelint:` lines suppress exactly those false positives (the override-scoped FILESEXTRAPATHS and DUSTCRAWLER_DTS) and nothing else.
 
 # nooelint: oelint.vars.noncoreoverride
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 # nooelint: oelint.vars.noncoreoverride
-ROCKROBO_DTS = "sun8i-r16-roborock.dtsi sun8i-r16-roborock-s5.dts sun8i-r16-roborock-v1.dts"
+DUSTCRAWLER_DTS = "sun8i-r16-roborock.dtsi sun8i-r16-roborock-s5.dts sun8i-r16-roborock-v1.dts"
 # 0001-sunxi-mmc-zero-clk-phase-per-node.patch: adds the boolean DT property rockrobo,zero-clk-phase, which makes a
 # controller program output/sample clock phase 0/0 above 400 kHz instead of mainline's sunxi_mmc_clk_delays table.
 # The stock 3.4 BSP runs these boards' eMMC (Toshiba 004G60, 8-bit DDR52 @ 50 MHz) at delay 0/0 -- measured on the Gen 1
@@ -18,22 +18,22 @@ ROCKROBO_DTS = "sun8i-r16-roborock.dtsi sun8i-r16-roborock-s5.dts sun8i-r16-robo
 # 0002: reset the mmc controller after an update-clock timeout, so the S5's SDIO Wi-Fi recovers.
 # 0003: no build path in the generated mach-types.h (buildpaths QA).
 # 0005: reset the mmc controller after a failed stop or a request that never completes.
-# rockrobo-trim.cfg: switch off the defconfig's subsystems these boards don't have or use (most of its ~617 modules).
-# rockrobo-update.cfg: what RAUC needs to install a bundle.
-SRC_URI:append:rockrobo = " ${@' '.join('file://' + f for f in d.getVar('ROCKROBO_DTS').split())} file://rockrobo.cfg file://rockrobo-trim.cfg file://rockrobo-update.cfg file://0001-sunxi-mmc-zero-clk-phase-per-node.patch \
+# dustcrawler-trim.cfg: switch off the defconfig's subsystems these boards don't have or use (most of its ~617 modules).
+# dustcrawler-update.cfg: what RAUC needs to install a bundle.
+SRC_URI:append:dustcrawler = " ${@' '.join('file://' + f for f in d.getVar('DUSTCRAWLER_DTS').split())} file://dustcrawler.cfg file://dustcrawler-trim.cfg file://dustcrawler-update.cfg file://0001-sunxi-mmc-zero-clk-phase-per-node.patch \
                                   file://0002-sunxi-mmc-reset-the-controller-after-an-update-clock-timeout.patch \
                                   file://0003-ARM-gen-mach-types-don-t-embed-the-input-s-path.patch \
                                   file://0004-sunxi-mmc-opt-out-of-DDR-per-node.patch \
                                   file://0005-sunxi-mmc-recover-from-a-failed-stop-and-a-lost-request.patch"
 
-do_configure:append:rockrobo() {
-    for f in ${ROCKROBO_DTS}; do
+do_configure:append:dustcrawler() {
+    for f in ${DUSTCRAWLER_DTS}; do
         cp ${UNPACKDIR}/$f ${S}/arch/arm/boot/dts/allwinner/
     done
 
     # Force the kernel "command line type" to CMDLINE_EXTEND. meta-sunxi's linux.inc sets CONFIG_CMDLINE (from the
     # ${CMDLINE} bitbake var below) but the choice between FROM_BOOTLOADER / EXTEND / FORCE is only visible once
-    # CONFIG_CMDLINE is non-empty, which happens AFTER the .cfg fragment is merged -- so rockrobo.cfg's
+    # CONFIG_CMDLINE is non-empty, which happens AFTER the .cfg fragment is merged -- so dustcrawler.cfg's
     # CONFIG_CMDLINE_EXTEND=y is silently dropped (invisible symbol) and olddefconfig then picks the default,
     # CMDLINE_FROM_BOOTLOADER, which makes the kernel ignore CONFIG_CMDLINE entirely. By now CONFIG_CMDLINE is set,
     # so re-assert the choice and re-resolve: EXTEND appends our ${CMDLINE} args to the bootloader's
@@ -46,4 +46,4 @@ do_configure:append:rockrobo() {
 # Kernel command line appended to the bootloader's (CONFIG_CMDLINE_EXTEND forced above). kernel.bbclass' do_configure
 # writes CONFIG_CMDLINE from this bitbake variable, so it must be set here, not as CONFIG_CMDLINE in the .cfg fragment.
 # ro: the system slot is never written.
-CMDLINE:rockrobo = "ro"
+CMDLINE:dustcrawler = "ro"

@@ -5,11 +5,11 @@ After=dev-ttyS2.device
 BindsTo=dev-ttyS2.device
 Conflicts=shutdown.target
 Before=shutdown.target
-# rockrobo-hal heartbeats the same link when it is installed
-ConditionPathExists=!/usr/bin/rockrobo-hal
+# dustcrawler-hal heartbeats the same link when it is installed
+ConditionPathExists=!/usr/bin/dustcrawler-hal
 
 [Service]
-ExecStart=/usr/sbin/rockrobo-mcu-heartbeat /dev/ttyS2
+ExecStart=/usr/sbin/dustcrawler-mcu-heartbeat /dev/ttyS2
 Restart=always
 RestartSec=1
 

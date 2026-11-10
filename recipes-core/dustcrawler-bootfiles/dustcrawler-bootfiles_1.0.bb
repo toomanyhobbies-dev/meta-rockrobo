@@ -5,7 +5,7 @@ produces that single /boot/zImage file as a package the image installs, so BitBa
 kernel: do_install[depends] on the kernel's do_deploy means a kernel/config/DTS change re-runs this \
 do_install, and IMAGE_INSTALL carries that into do_rootfs. (Doing the concatenation in a \
 ROOTFS_POSTPROCESS_COMMAND reading DEPLOY_DIR instead leaves it outside the signature graph -> stale images.)"
-HOMEPAGE = "https://github.com/toomanyhobbies-dev/meta-rockrobo"
+HOMEPAGE = "https://github.com/toomanyhobbies-dev/dustcrawler-nav"
 SECTION = "kernel"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
@@ -14,7 +14,7 @@ DEPENDS = "virtual/kernel"
 # no sources of its own: the inputs are the kernel's deployed zImage and DTB (see do_install[depends])
 SRC_URI = ""
 
-COMPATIBLE_MACHINE = "rockrobo"
+COMPATIBLE_MACHINE = "dustcrawler"
 # the concatenated image is machine-specific (per-robot DTB), so the package is too
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
@@ -32,7 +32,7 @@ do_install() {
     else
         k="${DEPLOY_DIR_IMAGE}/zImage-${MACHINE}.bin"
     fi
-    cat "$k" "${DEPLOY_DIR_IMAGE}/${ROCKROBO_DTB}" > ${D}/boot/zImage
+    cat "$k" "${DEPLOY_DIR_IMAGE}/${DUSTCRAWLER_DTB}" > ${D}/boot/zImage
 }
 
 FILES:${PN} += "/boot/zImage"

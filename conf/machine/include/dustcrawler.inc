@@ -2,10 +2,10 @@
 # (system_a = mmcblk0p8, system_b = mmcblk0p9, 512 MiB each, ext4, kernel at /boot/zImage).
 # The stock U-Boot stays: it implements the A/B fallback (the boot A/B notes), so no bootloader is built.
 require conf/machine/include/sun8i.inc
-MACHINEOVERRIDES =. "rockrobo:"
+MACHINEOVERRIDES =. "dustcrawler:"
 
 KERNEL_IMAGETYPE = "zImage"
-KERNEL_DEVICETREE = "allwinner/${ROCKROBO_DTB}"
+KERNEL_DEVICETREE = "allwinner/${DUSTCRAWLER_DTB}"
 SERIAL_CONSOLES = "115200;ttyS0"
 
 MACHINE_FEATURES = "serial"
@@ -21,7 +21,7 @@ IMAGE_OVERHEAD_FACTOR = "1.0"
 IMAGE_ROOTFS_EXTRA_SPACE = "0"
 
 # The stock U-Boot loads only a zImage (no separate initrd). The poky probe bundles its initramfs into the zImage;
-# the rockrobo distro boots its own rootfs from a plain zImage. Gate on DISTRO (set after local.conf parsing, so not
+# the dustcrawler distro boots its own rootfs from a plain zImage. Gate on DISTRO (set after local.conf parsing, so not
 # overridable from a kas file).
-INITRAMFS_IMAGE = "${@'rockrobo-probe-initramfs' if d.getVar('DISTRO') == 'poky' else ''}"
+INITRAMFS_IMAGE = "${@'dustcrawler-probe-initramfs' if d.getVar('DISTRO') == 'poky' else ''}"
 INITRAMFS_IMAGE_BUNDLE = "${@'1' if d.getVar('DISTRO') == 'poky' else '0'}"

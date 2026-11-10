@@ -1,5 +1,5 @@
 [Unit]
-Description=rockrobo Wi-Fi: wpa_supplicant on wlan0 (reuses the stock /mnt/data/wlan config in place)
+Description=dustcrawler Wi-Fi: wpa_supplicant on wlan0 (reuses the stock /mnt/data/wlan config in place)
 # The stock config lives on the shared data partition, so both slots use the same credentials with nothing copied.
 # Started when wlan0 appears; a missing card leaves it inactive instead of holding up boot.
 BindsTo=sys-subsystem-net-devices-wlan0.device

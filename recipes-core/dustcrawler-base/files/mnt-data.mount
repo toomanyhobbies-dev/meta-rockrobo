@@ -1,11 +1,11 @@
 # The stock data partition (UDISK = mmcblk0p1) holding persistent state; 'auto' tolerates ext4/vfat. nofail keeps
-# boot moving; without it the slot falls back (rockrobo-data-fail, rockrobo-data-guard).
+# boot moving; without it the slot falls back (dustcrawler-data-fail, dustcrawler-data-guard).
 [Unit]
 Description=Robot data partition (/mnt/data)
 DefaultDependencies=no
 Conflicts=umount.target
 Before=local-fs.target umount.target
-OnFailure=rockrobo-data-fail.service
+OnFailure=dustcrawler-data-fail.service
 
 [Mount]
 What=/dev/mmcblk0p1

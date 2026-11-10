@@ -6,7 +6,7 @@ Before=shutdown.target
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/rockrobo-data-guard 90
+ExecStart=/usr/sbin/dustcrawler-data-guard 90
 
 [Install]
 WantedBy=sysinit.target
