@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: MIT
 # Wait up to $1 seconds for /mnt/data, then fall back to the other slot
 limit=${1:-90}
 i=0

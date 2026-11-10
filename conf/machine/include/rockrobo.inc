@@ -1,6 +1,6 @@
 # Roborock "Ruby-R16" boards (S5, Gen 1): Allwinner R16, 512 MB, eMMC with the stock A/B layout
 # (system_a = mmcblk0p8, system_b = mmcblk0p9, 512 MiB each, ext4, kernel at /boot/zImage).
-# The stock U-Boot stays: it implements the A/B fallback (docs/boot-ab-findings.md), so no bootloader is built.
+# The stock U-Boot stays: it implements the A/B fallback (the boot A/B notes), so no bootloader is built.
 require conf/machine/include/sun8i.inc
 MACHINEOVERRIDES =. "rockrobo:"
 

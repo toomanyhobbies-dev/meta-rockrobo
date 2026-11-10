@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: MIT
 # Save why /mnt/data is missing to the rootfs, then reboot; the bootloader falls back to the other slot
 dir=/root/data-fail
 if mount -o remount,rw /; then
